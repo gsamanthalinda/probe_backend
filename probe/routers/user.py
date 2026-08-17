@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from probe.schemas.user import UserCreate, UserRead, UserUpdate, ForgotPasswordRequest, ResetPasswordConfirm
+from probe.schemas.user import UserCreate, UserRead, UserRegisterResponse, UserUpdate, ForgotPasswordRequest, ResetPasswordConfirm
 from probe.services.user import (
     get_user,
     create_user,
@@ -13,17 +13,19 @@ from probe.services.user import (
     request_password_reset,
     reset_password_with_token,
 )
-from probe.services.auth import get_current_user, get_admin_user
+from probe.services.auth import get_current_user, get_admin_user, create_access_token
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-@router.post("/", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=UserRegisterResponse, status_code=status.HTTP_201_CREATED)
 def route_create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
 ):
-    return create_user(db, data)
+    user = create_user(db, data)
+    access_token = create_access_token(str(user.user_id), str(user.user_type))
+    return {"user": user, "access_token": access_token}
 
 
 @router.post("/login")
