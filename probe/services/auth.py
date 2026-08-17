@@ -18,7 +18,7 @@ oauth2_scheme = HTTPBearer()
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "15"))
+JWT_EXPIRE_DAYS = int(os.getenv("JWT_EXPIRE_DAYS", "30"))
 
 
 def hash_password(password: str) -> str:
@@ -29,7 +29,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
     return pwd_context.verify(password[:72], hashed_password)
 
 def create_access_token(user_id: str, user_type: str) -> str:
-    expire_at = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    expire_at = datetime.now(timezone.utc) + timedelta(days=JWT_EXPIRE_DAYS)
     payload = {"sub": str(user_id), "user_type": str(user_type), "exp": expire_at}
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
