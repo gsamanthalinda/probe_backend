@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from probe.models.device import Device
 
-
 class DeviceRepository:
     @staticmethod
     def get_by_id(db: Session, device_id: UUID) -> Device | None:

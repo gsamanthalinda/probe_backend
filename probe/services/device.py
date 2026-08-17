@@ -5,7 +5,7 @@ from typing import cast
 
 
 from probe.repositories.device import DeviceRepository
-from probe.repositories.user import UserRepository
+from probe.repositories.user import user_repository
 from probe.models.enums import UserType
 from probe.schemas.device import DeviceCreate, DeviceUpdate
 
@@ -55,7 +55,7 @@ def create_device(db: Session, data: DeviceCreate, current_user=None):
         )
 
 
-    recycler = UserRepository.get_by_id(db, data.recycler_id)
+    recycler = user_repository.get_by_id(db, id=data.recycler_id)
     if not recycler:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -12,7 +12,8 @@ from probe.services.battery import (
    search_batteries,
    create_battery,
    update_battery,
-   delete_battery
+   delete_battery,
+   get_available_by_chemistry
 )
 from probe.services.auth import get_current_user, get_admin_user
 
@@ -32,6 +33,16 @@ def route_list_batteries(
     current_user=Depends(get_current_user),
 ):
    return list_batteries(db, device_id=device_id, current_user=current_user)
+
+
+@router.get("/availability/chemistry", status_code=status.HTTP_200_OK)
+def route_get_available_by_chemistry(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if current_user.user_type != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return get_available_by_chemistry(db)
 
 
 @router.get("/search/suggestions", response_model=list[str])

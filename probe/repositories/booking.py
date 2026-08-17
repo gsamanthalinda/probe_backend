@@ -10,7 +10,6 @@ from probe.models.enums import BookingStatus
 
 
 
-
 class BookingRepository:
    def __init__(self):
        self.model = Booking
@@ -29,6 +28,12 @@ class BookingRepository:
            self.model.battery_id == battery_id,
            self.model.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
        ).first()
+
+
+   def get_active_bookings(self, db: Session):
+       return db.query(self.model).filter(
+           self.model.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
+       ).all()
 
 
    def create(self, db: Session, data: dict):

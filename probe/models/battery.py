@@ -2,7 +2,8 @@ import uuid
 from sqlalchemy import (
     Column,
     ForeignKey,
-    String
+    String,
+    Integer
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -18,6 +19,7 @@ class Battery(Base, TimestampMixin):
     chemistry = Column(String, nullable=False)
     recycler_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), nullable=False)
     device_id = Column(UUID(as_uuid=True), ForeignKey("devices.device_id"), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
 
 
 

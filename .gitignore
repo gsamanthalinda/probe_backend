@@ -3,8 +3,10 @@
 *.pyc
 test.db
 env/
-.env
-__pycache__/
-*.pyc
-env/
 *.db
+alembic/versions/*.pyc
+.DS_Store
+/alembic
+docker-compose.yml
+Dockerfile
+seed.py
