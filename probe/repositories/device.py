@@ -39,3 +39,6 @@ class DeviceRepository:
         db.delete(device)
         db.commit()
         return device
+
+
+device_repository = DeviceRepository()

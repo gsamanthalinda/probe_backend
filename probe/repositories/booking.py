@@ -1,10 +1,12 @@
 import uuid
 
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 
 from probe.models.booking import Booking
+from probe.models.enums import BookingStatus
 
 
 
@@ -20,6 +22,13 @@ class BookingRepository:
 
    def get_all(self, db: Session):
        return db.query(self.model).all()
+
+
+   def get_active_by_battery_id(self, db: Session, battery_id: uuid.UUID):
+       return db.query(self.model).filter(
+           self.model.battery_id == battery_id,
+           self.model.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
+       ).first()
 
 
    def create(self, db: Session, data: dict):
@@ -42,6 +51,8 @@ class BookingRepository:
        db.delete(db_obj)
        db.commit()
        return True
+
+
 
 
 booking_repository = BookingRepository()

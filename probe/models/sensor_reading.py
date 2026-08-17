@@ -2,12 +2,14 @@ import uuid
 from sqlalchemy import (
     Column,
     Float,
-    ForeignKey
+    ForeignKey,
+    Enum,
+    String
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-
+from .enums import ReadingStatus
 
 from database import Base, TimestampMixin
 
@@ -23,6 +25,8 @@ class SensorReading(Base, TimestampMixin):
     voltage = Column(Float, nullable=False)
     current = Column(Float, nullable=False)
     state_of_health = Column(Float, nullable=False)
+    category = Column(String, nullable=False)
+    status = Column(Enum(ReadingStatus), nullable=False)
 
 
 

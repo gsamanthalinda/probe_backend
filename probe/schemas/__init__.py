@@ -6,27 +6,6 @@ from .device import DeviceBase, DeviceCreate, DeviceUpdate, DeviceRead
 __all__=[
      "BatteryCreate", "BatteryUpdate", "BatteryRead",
      "BookingCreate", "BookingUpdate", "BookingRead",
-     "UserCreate", "UserUpdate", "UserRead"
+     "UserCreate", "UserUpdate", "UserRead",
+     "DeviceBase", "DeviceCreate", "DeviceUpdate", "DeviceRead"
 ]
-
-
-      
-
-
-
-
-
-
-      "BatteryCreate", "BatteryUpdate", "BatteryRead"
-      
-]
-
-from .user import UserCreate, UserUpdate, UserRead
-
-__all__ = [
-    
-   "UserCreate", "UserUpdate", "UserRead"
-]
-
-from .device import DeviceBase, DeviceCreate, DeviceUpdate, DeviceRead
-

@@ -2,14 +2,15 @@ import uuid
 from sqlalchemy import(
     Column,
     String,
-    Enum
+    Enum,
+    DateTime
 )
+from datetime import datetime, timezone
 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base, TimestampMixin
 from .enums import UserType
-
 
 
 class User(Base, TimestampMixin):
@@ -22,6 +23,8 @@ class User(Base, TimestampMixin):
     password_hash = Column(String, nullable=False)
     user_type = Column(Enum(UserType), nullable=False)
     company_name = Column(String, nullable=False)
+    reset_token = Column(String, nullable=True, index=True)
+    reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
 
     devices = relationship("Device", back_populates="user")
     batteries = relationship("Battery", back_populates="recycler")

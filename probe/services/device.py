@@ -10,25 +10,28 @@ from probe.models.enums import UserType
 from probe.schemas.device import DeviceCreate, DeviceUpdate
 
 
-def get_device(db: Session, device_id: UUID):
+def get_device(db: Session, device_id: UUID, current_user=None):
     device = DeviceRepository.get_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
     return device
 
 
-def get_device_by_serial_number(db: Session, serial_number: str):
+def get_device_by_serial_number(db: Session, serial_number: str, current_user=None):
     device = DeviceRepository.get_by_serial_number(db, serial_number)
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
     return device
 
 
-def list_devices(db: Session):
-    return DeviceRepository.get_all(db)
+def list_devices(db: Session, current_user=None):
+    devices = DeviceRepository.get_all(db)
+    if current_user and current_user.user_type != "ADMIN":
+        devices = [d for d in devices if d.recycler_id == current_user.user_id]
+    return devices
 
 
-def create_device(db: Session, data: DeviceCreate):
+def create_device(db: Session, data: DeviceCreate, current_user=None):
     clean_serial_number = data.serial_number.strip()
     clean_channel = data.channel.strip()
     clean_status = data.status.value.strip() if hasattr(data.status, 'value') else str(data.status).strip()
@@ -76,7 +79,7 @@ def create_device(db: Session, data: DeviceCreate):
     return DeviceRepository.create(db, dumped_data)
 
 
-def update_device(db: Session, device_id: UUID, data: DeviceUpdate):
+def update_device(db: Session, device_id: UUID, data: DeviceUpdate, current_user=None):
     device = get_device(db, device_id)
     update_data = data.model_dump(exclude_unset=True)
     update_data.pop("serial_number", None)
@@ -84,6 +87,6 @@ def update_device(db: Session, device_id: UUID, data: DeviceUpdate):
     return DeviceRepository.update(db, device, update_data)
 
 
-def delete_device(db: Session, device_id: UUID):
+def delete_device(db: Session, device_id: UUID, current_user=None):
     device = get_device(db, device_id)
     return DeviceRepository.delete(db, device)

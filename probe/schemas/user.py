@@ -3,7 +3,7 @@ from uuid import UUID
 from .enums import UserType
 
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserBase(BaseModel):
@@ -30,3 +30,12 @@ class UserRead(UserBase):
 
     user_id: UUID
     created_at: datetime
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordConfirm(BaseModel):
+    token: str
+    new_password: str = Field(..., min_length=8)

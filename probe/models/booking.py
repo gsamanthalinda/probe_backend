@@ -9,12 +9,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from .enums import BookingStatus
 
-
-
 from database import Base, TimestampMixin
-
-
-
 class Booking(Base, TimestampMixin):
     __tablename__ = "bookings"
 
