@@ -18,7 +18,6 @@ class BookingCreate(BookingBase):
 class BookingUpdate(BaseModel):
    user_id: UUID | None = None
    battery_id: UUID | None = None
-   status: BookingStatus | None = None
    quantity: int | None = Field(None, ge=1)
      
 class BookingRead(BookingBase):
@@ -26,3 +25,4 @@ class BookingRead(BookingBase):
    
    booking_id: UUID
    created_at: datetime
+   status: BookingStatus
