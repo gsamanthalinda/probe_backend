@@ -122,9 +122,7 @@ scraped_18650_reference_sheet=[
         {"id": "lishen_lr1865ah", "name": "Lishen (LS) LR1865AH (2200mAh)"},
         {"id": "lishen_lr1865sf", "name": "Lishen (LS) LR1865SF (2200mAh)"},
         {"id": "sinowatt_sw18650_25hp", "name": "Sinowatt SW18650-25HP (2450mAh)"},
-        {"id": "generic_18650_fallback", "name": "Generic/Unknown 18650 Wrapper"},
         {"id": "generic_18650_fallback", "name": "Generic/Unknown 18650 Wrapper"}
-
 ]
 def identify_battery_type(text_written_on_battery: str) -> str | None:
     if not text_written_on_battery:
@@ -132,11 +130,10 @@ def identify_battery_type(text_written_on_battery: str) -> str | None:
     clean_input = text_written_on_battery.strip().lower()
 
     for battery in scraped_18650_reference_sheet:
-
-    if clean_input in battery["name"].lower() or clean_input in battery["id"].lower():
-        print(f"MATCH CONFIRMED: This cell is a registered {battery['name']}")
+        if clean_input in battery["name"].lower() or clean_input in battery["id"].lower():
+            print(f"MATCH CONFIRMED: This cell is a registered {battery['name']}")
             return "LITHIUM-ION"
-     
+
     print(f"WARNING: The cell mark '{text_written_on_battery}' does not exist in our library.")
     return None
 
