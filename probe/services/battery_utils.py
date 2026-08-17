@@ -133,12 +133,12 @@ def identify_battery_type(text_written_on_battery: str) -> str | None:
 
     for battery in scraped_18650_reference_sheet:
 
-     if clean_input in battery["name"].lower() or clean_input in battery["id"].lower():
-            print(f"MATCH CONFIRMED: This cell is a registered {battery['name']}")
+    if clean_input in battery["name"].lower() or clean_input in battery["id"].lower():
+        print(f"MATCH CONFIRMED: This cell is a registered {battery['name']}")
             return "LITHIUM-ION"
      
-     print(f"WARNING: The cell mark '{text_written_on_battery}' does not exist in our library.")
-     return None
+    print(f"WARNING: The cell mark '{text_written_on_battery}' does not exist in our library.")
+    return None
 
 
 
