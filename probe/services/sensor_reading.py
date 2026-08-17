@@ -59,7 +59,7 @@ class SensorReadingService:
     @staticmethod
     def create_sensor_reading(db: Session, data: SensorReadingCreate):
         device = DeviceRepository.get_by_id(db, data.device_id)
-        battery = BatteryRepository.get_by_id(db, data.battery_id)
+        battery = BatteryRepository.get_by_id(db, battery_id=data.battery_id)
         if not device or not battery:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
