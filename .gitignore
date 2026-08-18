@@ -1,0 +1,12 @@
+.env
+**/__pycache__/
+*.pyc
+test.db
+env/
+*.db
+alembic/versions/*.pyc
+.DS_Store
+/alembic
+docker-compose.yml
+Dockerfile
+seed.py
