@@ -32,6 +32,12 @@ class UserRead(UserBase):
     created_at: datetime
 
 
+class UserRegisterResponse(BaseModel):
+    user: UserRead
+    access_token: str
+    token_type: str = "bearer"
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 

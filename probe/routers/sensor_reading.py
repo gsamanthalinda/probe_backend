@@ -13,7 +13,8 @@ def record_hardware_telemetry(
    payload: SensorReadingCreate,
    db: Session = Depends(get_db)
 ):
-   return SensorReadingService.create_sensor_reading(db=db, data=payload)
+   return SensorReadingService.create_sensor_reading(db, payload)
+
 
 @router.get("/{sensor_reading_id}", response_model=SensorReadingResponse)
 def get_sensor_reading(
