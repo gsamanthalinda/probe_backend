@@ -13,10 +13,14 @@ class UserRepository:
         return db.query(self.model).all()
 
     def get_by_email(self, db: Session, email: str):
-        return db.query(self.model).filter(self.model.email == email).first()
+        if not email or len(email) > 255:
+            return None
+        return db.query(self.model).filter(self.model.email == email.strip().lower()).first()
 
     def get_by_reset_token(self, db: Session, token: str):
-        return db.query(self.model).filter(self.model.reset_token == token).first()
+        if not token or len(token) > 255:
+            return None
+        return db.query(self.model).filter(self.model.reset_token == token.strip()).first()
 
     def create(self, db: Session, data: dict):
         user = self.model(**data)
@@ -27,7 +31,8 @@ class UserRepository:
 
     def update(self, db: Session, db_obj: User, data: dict):
         for field, value in data.items():
-            setattr(db_obj, field, value)
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, value)
         db.commit()
         db.refresh(db_obj)
         return db_obj

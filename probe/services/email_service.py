@@ -4,6 +4,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from dotenv import load_dotenv
+from fastapi import HTTPException, status
 
 project_root = Path(__file__).resolve().parent.parent.parent
 load_dotenv(dotenv_path=project_root / ".env")
@@ -26,8 +27,20 @@ def _get_smtp_server():
 
 
 def send_password_reset_email(to_email: str, reset_token: str):
+    if not to_email or "@" not in to_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address."
+        )
+
+    if not reset_token or len(reset_token) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset token."
+        )
+
     reset_link = f"{FRONTEND_URL}/reset-password?token={reset_token}"
-    
+
     subject = "HERckers - Password Reset Request"
     body = f"""
     <html>
@@ -45,46 +58,59 @@ def send_password_reset_email(to_email: str, reset_token: str):
     </body>
     </html>
     """
-    
+
     msg = MIMEMultipart()
     msg['From'] = EMAIL_FROM
     msg['To'] = to_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'html'))
-    
+
     try:
         with _get_smtp_server() as server:
             server.sendmail(EMAIL_FROM, to_email, msg.as_string())
-        print(f"[EMAIL] Password reset email sent to {to_email}")
         return True
     except Exception as e:
-        print(f"[EMAIL] Failed to send password reset email to {to_email}: {e}")
-        return False
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send password reset email."
+        )
 
 
 def send_welcome_email(to_email: str, first_name: str):
+    if not to_email or "@" not in to_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid email address."
+        )
+
+    if not first_name or len(first_name.strip()) == 0:
+        first_name = "User"
+
+    safe_name = first_name.strip()[:100]
+
     subject = "Welcome to HERckers"
     body = f"""
     <html>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2c3e50;">Welcome {first_name}!</h2>
+        <h2 style="color: #2c3e50;">Welcome {safe_name}!</h2>
         <p>Your account has been successfully created on HERckers.</p>
         <p>You can now log in and start using our platform.</p>
     </body>
     </html>
     """
-    
+
     msg = MIMEMultipart()
     msg['From'] = EMAIL_FROM
     msg['To'] = to_email
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'html'))
-    
+
     try:
         with _get_smtp_server() as server:
             server.sendmail(EMAIL_FROM, to_email, msg.as_string())
-        print(f"[EMAIL] Welcome email sent to {to_email}")
         return True
     except Exception as e:
-        print(f"[EMAIL] Failed to send welcome email to {to_email}: {e}")
-        return False
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send welcome email."
+        )

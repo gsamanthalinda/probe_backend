@@ -19,10 +19,13 @@ class BatteryRepository:
         return db.query(self.model).filter(self.model.device_id == device_id).all()
 
     def search_by_chemistry(self, db: Session, query: str, limit: int = 10):
+        if not query or not query.strip():
+            return []
+        safe_query = query.strip()[:100]
         return (
             db.query(self.model)
-            .filter(self.model.chemistry.ilike(f"%{query}%"))
-            .limit(limit)
+            .filter(self.model.chemistry.ilike(f"%{safe_query}%"))
+            .limit(max(1, min(limit, 100)))
             .all()
         )
 
@@ -33,9 +36,11 @@ class BatteryRepository:
         db.refresh(battery)
         return battery
 
-    def update(self, db: Session, db_obj: Battery, data: dict):
+    def update(self, db: Session, db_obj: Battery, data: dict) -> Battery:
+        allowed_fields = {"chemistry", "quantity", "recycler_id", "device_id"}
         for field, value in data.items():
-            setattr(db_obj, field, value)
+            if field in allowed_fields and hasattr(db_obj, field):
+                setattr(db_obj, field, value)
         db.commit()
         db.refresh(db_obj)
         return db_obj
