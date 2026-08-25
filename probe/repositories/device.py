@@ -15,7 +15,9 @@ class DeviceRepository:
 
     @staticmethod
     def get_by_serial_number(db: Session, serial_number: str) -> Device | None:
-        return db.query(Device).filter(Device.serial_number == serial_number).first()
+        if not serial_number or len(serial_number) > 100:
+            return None
+        return db.query(Device).filter(Device.serial_number == serial_number.strip()).first()
 
     @staticmethod
     def create(db: Session, data: dict) -> Device:
@@ -27,8 +29,10 @@ class DeviceRepository:
 
     @staticmethod
     def update(db: Session, device: Device, data: dict) -> Device:
-        for field, value in data.items():
-            setattr(device, field, value)
+        allowed_fields = {"channel", "description", "status", "error_code"}
+        for key, value in data.items():
+            if key in allowed_fields and hasattr(device, key):
+                setattr(device, key, value)
         db.commit()
         db.refresh(device)
         return device
