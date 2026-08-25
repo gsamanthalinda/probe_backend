@@ -30,24 +30,38 @@ class UserRead(UserBase):
 
     user_id: UUID
     created_at: datetime
+    mfa_enabled: bool = False
 
 
 class UserRegisterResponse(BaseModel):
     user: UserRead
 
 
+class MFASetupResponse(BaseModel):
+    secret: str
+    qr_code_uri: str
+    backup_codes: list[str]
+
+
+class MFAVerifyRequest(BaseModel):
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class MFADisableRequest(BaseModel):
+    password: str = Field(..., min_length=8, max_length=72)
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+class MFALoginRequest(BaseModel):
+    email: EmailStr = Field(..., max_length=255)
+    password: str = Field(..., min_length=8, max_length=72)
+    code: Optional[str] = Field(None, min_length=6, max_length=6)
+
+
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-
-
-class RefreshTokenRequest(BaseModel):
-    refresh_token: str
-
-
-class LogoutRequest(BaseModel):
-    refresh_token: str
 
 
 class ForgotPasswordRequest(BaseModel):

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status, HTTPException, Request
 from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 from database import get_db
-from probe.schemas.user import UserCreate, UserRead, UserRegisterResponse, UserUpdate, ForgotPasswordRequest, ResetPasswordConfirm
+from probe.schemas.user import UserCreate, UserRead, UserRegisterResponse, UserUpdate, ForgotPasswordRequest, ResetPasswordConfirm, MFAVerifyRequest, MFADisableRequest, MFALoginRequest, MFASetupResponse, TokenResponse
 from probe.services.user import (
     get_user,
     create_user,
@@ -15,6 +15,9 @@ from probe.services.user import (
     reset_password_with_token,
     logout_user,
     refresh_token,
+    setup_mfa,
+    verify_and_enable_mfa,
+    disable_mfa_user,
 )
 from probe.services.auth import get_current_user, get_admin_user, limiter
 
@@ -32,13 +35,21 @@ def route_create_user(
     return {"user": user}
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
-def route_login(request: Request, email: str, password: str, db: Session = Depends(get_db)):
-    return authenticate_user(db, email, password)
+def route_login(request: Request, email: str = None, password: str = None, code: str = None, db: Session = Depends(get_db)):
+    if not email or not password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email and password are required.")
+    return authenticate_user(db, email, password, code)
 
 
-@router.post("/refresh-token")
+@router.post("/login/2fa", response_model=TokenResponse)
+@limiter.limit("10/minute")
+def route_login_2fa(request: Request, data: MFALoginRequest, db: Session = Depends(get_db)):
+    return authenticate_user(db, data.email, data.password, data.code)
+
+
+@router.post("/refresh-token", response_model=TokenResponse)
 @limiter.limit("10/minute")
 def route_refresh_token(request: Request, refresh_token: str = HTTPBearer(), db: Session = Depends(get_db)):
     return refresh_token(db, refresh_token.credentials)
@@ -46,8 +57,9 @@ def route_refresh_token(request: Request, refresh_token: str = HTTPBearer(), db:
 
 @router.post("/logout")
 @limiter.limit("10/minute")
-def route_logout(request: Request, refresh_token: str = HTTPBearer(), db: Session = Depends(get_db)):
-    return logout_user(db, refresh_token.credentials)
+def route_logout(request: Request, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    logout_user(db, "")
+    return {"message": "Logged out successfully."}
 
 
 @router.post("/forgot-password")
@@ -112,3 +124,38 @@ def route_delete_user(
     current_user=Depends(get_current_user),
 ):
     delete_user(db, user_id, current_user)
+
+
+@router.post("/2fa/setup", response_model=MFASetupResponse)
+@limiter.limit("10/minute")
+def route_setup_mfa(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    setup_data = setup_mfa(db, current_user.user_id)
+    return setup_data
+
+
+@router.post("/2fa/verify")
+@limiter.limit("10/minute")
+def route_verify_mfa(
+    request: Request,
+    data: MFAVerifyRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    result = verify_and_enable_mfa(db, current_user.user_id, data.code)
+    return result
+
+
+@router.post("/2fa/disable")
+@limiter.limit("10/minute")
+def route_disable_mfa(
+    request: Request,
+    data: MFADisableRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    result = disable_mfa_user(db, current_user.user_id, data.password, data.code)
+    return result

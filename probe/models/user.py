@@ -3,7 +3,9 @@ from sqlalchemy import(
     Column,
     String,
     Enum,
-    DateTime
+    DateTime,
+    Boolean,
+    Integer
 )
 from datetime import datetime, timezone
 
@@ -25,6 +27,10 @@ class User(Base, TimestampMixin):
     company_name = Column(String, nullable=False)
     reset_token = Column(String, nullable=True, index=True)
     reset_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    mfa_enabled = Column(Boolean, default=False, nullable=False)
+    mfa_secret = Column(String, nullable=True)
+    mfa_backup_codes = Column(String, nullable=True)
+    token_version = Column(Integer, default=1, nullable=False)
 
     devices = relationship("Device", back_populates="user")
     batteries = relationship("Battery", back_populates="recycler")
