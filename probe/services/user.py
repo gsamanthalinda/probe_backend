@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 
 from probe.repositories.user import user_repository
 from probe.schemas.user import UserCreate, UserUpdate, ForgotPasswordRequest, ResetPasswordConfirm
-from probe.services.auth import hash_password, verify_password, create_access_token, create_refresh_token, revoke_user_tokens, refresh_access_token, verify_mfa_code, generate_mfa_secret, get_totp_uri, enable_mfa, disable_mfa, generate_backup_codes, hash_backup_code, is_locked_out, record_login_attempt, clear_login_attempts
+from probe.services.auth import hash_password, verify_password, create_access_token, create_refresh_token, revoke_user_tokens, revoke_user_tokens_by_id, refresh_access_token, verify_mfa_code, generate_mfa_secret, get_totp_uri, enable_mfa, disable_mfa, generate_backup_codes, hash_backup_code, is_locked_out, record_login_attempt, clear_login_attempts, get_user_id_from_refresh_token
 from probe.services.email_service import send_password_reset_email
 
 
@@ -187,23 +187,22 @@ def request_password_reset(db: Session, data: ForgotPasswordRequest):
         )
 
     user = user_repository.get_by_email(db, clean_email)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account found with this email address."
-        )
+    if user:
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
 
-    token = secrets.token_urlsafe(32)
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        user_repository.update(db, user, {
+            "reset_token": token,
+            "reset_token_expires_at": expires_at
+        })
 
-    user_repository.update(db, user, {
-        "reset_token": token,
-        "reset_token_expires_at": expires_at
-    })
+        try:
+            send_password_reset_email(user.email, token)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to send password reset email: {e}")
 
-    send_password_reset_email(user.email, token)
-
-    return {"message": "Password reset link sent to your email."}
+    return {"message": "If an account exists with this email, a password reset link has been sent."}
 
 
 def reset_password_with_token(db: Session, data: ResetPasswordConfirm):
@@ -242,19 +241,8 @@ def reset_password_with_token(db: Session, data: ResetPasswordConfirm):
     return {"message": "Password reset successful."}
 
 
-def logout_user(db: Session, refresh_token: str):
-    if not refresh_token:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Refresh token is required."
-        )
-    try:
-        payload = jwt.decode(refresh_token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id:
-            revoke_user_tokens(db, uuid.UUID(user_id))
-    except JWTError:
-        pass
+def logout_user(user_id: uuid.UUID):
+    revoke_user_tokens_by_id(user_id)
     return {"message": "Logged out successfully."}
 
 
@@ -265,7 +253,7 @@ def refresh_token(db: Session, refresh_token: str):
             detail="Refresh token is required."
         )
     new_access_token = refresh_access_token(db, refresh_token)
-    return {"access_token": new_access_token, "token_type": "bearer"}
+    return {"access_token": new_access_token}
 
 
 def setup_mfa(db: Session, user_id: uuid.UUID):
@@ -278,6 +266,11 @@ def setup_mfa(db: Session, user_id: uuid.UUID):
     secret = generate_mfa_secret()
     qr_uri = get_totp_uri(secret, user.email)
     plain_codes, hashed_codes = generate_backup_codes()
+    
+    user.mfa_secret = secret
+    user.mfa_backup_codes = ",".join(hashed_codes)
+    db.commit()
+    db.refresh(user)
     
     return {
         "secret": secret,
@@ -298,14 +291,11 @@ def verify_and_enable_mfa(db: Session, user_id: uuid.UUID, code: str):
     if not verify_mfa_code(secret, code):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA code")
     
-    plain_codes, hashed_codes = generate_backup_codes()
     user.mfa_enabled = True
-    user.mfa_secret = secret
-    user.mfa_backup_codes = ",".join(hashed_codes)
     db.commit()
     db.refresh(user)
     
-    return {"plain_backup_codes": plain_codes}
+    return {"message": "MFA enabled successfully"}
 
 
 def disable_mfa_user(db: Session, user_id: uuid.UUID, password: str, code: str):
@@ -319,9 +309,5 @@ def disable_mfa_user(db: Session, user_id: uuid.UUID, password: str, code: str):
     if not verify_mfa_code(user.mfa_secret, code):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid 2FA code")
     
-    user.mfa_enabled = False
-    user.mfa_secret = None
-    user.mfa_backup_codes = None
-    db.commit()
-    db.refresh(user)
+    user_repository.disable_mfa(db, user)
     return {"message": "MFA disabled successfully"}

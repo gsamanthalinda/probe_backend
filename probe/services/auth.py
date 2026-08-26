@@ -110,6 +110,28 @@ def revoke_user_tokens(db: Session, user_id: uuid.UUID):
     return user
 
 
+def revoke_user_tokens_by_id(user_id: uuid.UUID):
+    from database import get_db
+    db = next(get_db())
+    try:
+        user = user_repository.get_by_id(db, user_id)
+        if user:
+            user.token_version = (user.token_version or 0) + 1
+            db.commit()
+            db.refresh(user)
+        return user
+    finally:
+        db.close()
+
+
+def get_user_id_from_refresh_token(raw_token: str) -> Optional[str]:
+    try:
+        payload = jwt.decode(raw_token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        return payload.get("sub")
+    except JWTError:
+        return None
+
+
 def get_current_user(token=Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token.credentials, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])

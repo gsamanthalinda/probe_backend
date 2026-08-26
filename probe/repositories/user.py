@@ -41,4 +41,25 @@ class UserRepository:
         db.delete(db_obj)
         db.commit()
 
+    def disable_mfa(self, db: Session, db_obj: User):
+        db_obj.mfa_enabled = False
+        db_obj.mfa_secret = None
+        db_obj.mfa_backup_codes = None
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def setup_mfa(self, db: Session, db_obj: User, secret: str, hashed_backup_codes: str):
+        db_obj.mfa_secret = secret
+        db_obj.mfa_backup_codes = hashed_backup_codes
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def enable_mfa(self, db: Session, db_obj: User):
+        db_obj.mfa_enabled = True
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
 user_repository = UserRepository()
