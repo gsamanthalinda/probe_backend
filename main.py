@@ -30,7 +30,7 @@ app.add_middleware(
     allowed_hosts=["localhost", "127.0.0.1", "*.localhost"],
 )
 
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://herckersdashboard.vercel.app").split(",")
+origins = os.getenv("CORS_ORIGINS").split(",")
 
 app.add_middleware(
     CORSMiddleware,
