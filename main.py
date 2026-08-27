@@ -4,9 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from probe.rate_limiter import limiter
+from probe.rate_limiter import limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from probe.routers import user_router
 from probe.routers import device_router
 from probe.routers import battery_router
@@ -20,9 +18,9 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="probe API",
     version="1.0.0",
-    docs_url=None,
-    redoc_url=None,
-    openapi_url=None,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -38,8 +36,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_methods=["*"],
+    allow_headers=["*"],
     max_age=600,
 )
 

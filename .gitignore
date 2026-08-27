@@ -10,3 +10,6 @@ alembic/versions/*.pyc
 docker-compose.yml
 Dockerfile
 seed.py
+node_modules/
+.next/
+dist/
