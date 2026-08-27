@@ -28,7 +28,58 @@ Start the development server with Uvicorn using uvicorn main:app --reload --host
 When the application is running, interactive API documentation is available at Swagger UI at /docs, ReDoc at /redoc, and the OpenAPI JSON at /openapi.json.
 
 ## Project Structure
-The codebase is organized into the following modules: main.py for the application entry point, middleware, and router registration, database.py for the database engine, session factory, and base model, probe/routers/ for API route definitions, probe/services/ for the business logic layer, probe/repositories/ for the data access layer, probe/models/ for SQLAlchemy ORM models and enums, and probe/schemas/ for Pydantic request and response schemas.
 
-## Contributing
-Contributions are welcome. Please open an issue or pull request to propose changes.
+HERckers_Backend/
+├── main.py                 # Application entry point, middleware, and router registration
+├── database.py             # Database engine, session factory, and base model
+├── requirements.txt        # Python dependencies
+├── Procfile                # Production process declaration for uvicorn
+├── pyrightconfig.json      # Static type-checking configuration
+├── .env                    # Environment variables (gitignored)
+├── .gitignore              # Git ignore rules
+├── .python-version         # Pinned Python runtime version
+├── package.json            # Node metadata for tooling or scripts
+├── package-lock.json       # Node lockfile
+├── .github/                # GitHub Actions workflows and repo config
+├── .kilo/                  # Kilo workspace configuration
+├── probe/                  # Core application package
+│   ├── __init__.py
+│   ├── rate_limiter.py     # SlowAPI limiter and exception handler setup
+│   ├── dependencies.py     # Shared FastAPI dependencies
+│   ├── routers/            # API route handlers
+│   │   ├── __init__.py
+│   │   ├── user.py         # User auth, profile, and MFA routes
+│   │   ├── device.py       # Device CRUD and lookup routes
+│   │   ├── battery.py      # Battery management routes
+│   │   ├── booking.py      # Booking and status-transition routes
+│   │   └── sensor_reading.py # Sensor reading ingestion routes
+│   ├── services/           # Business logic layer
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── device.py
+│   │   ├── battery.py
+│   │   ├── booking.py
+│   │   └── sensor_reading.py
+│   ├── repositories/       # Data access layer
+│   │   ├── __init__.py
+│   │   ├── user.py
+│   │   ├── device.py
+│   │   ├── battery.py
+│   │   ├── booking.py
+│   │   └── sensor_reading.py
+│   ├── models/             # SQLAlchemy ORM models
+│   │   ├── __init__.py
+│   │   ├── enums.py        # Shared enumerations
+│   │   ├── user.py
+│   │   ├── device.py
+│   │   ├── battery.py
+│   │   ├── booking.py
+│   │   └── sensor_reading.py
+│   └── schemas/            # Pydantic request and response schemas
+│       ├── __init__.py
+│       ├── enums.py
+│       ├── user.py
+│       ├── device.py
+│       ├── booking.py
+│       └── sensor_reading.py
+└── README.md
