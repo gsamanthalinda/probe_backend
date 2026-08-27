@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from probe.schemas.booking import BookingCreate, BookingRead, BookingUpdate
@@ -14,14 +14,16 @@ from probe.services.booking import (
    delete_booking,
    transition_booking_status
 )
-from probe.services.auth import get_current_user, get_admin_user
+from probe.services.auth import get_current_user, get_admin_user, limiter
 
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
 
 @router.get("/", response_model=list[BookingRead])
+@limiter.limit("30/minute")
 def route_list_bookings(
+    request: Request,
     db: Session = Depends(get_db),
     current_user=Depends(get_admin_user),
 ):
@@ -29,7 +31,9 @@ def route_list_bookings(
 
 
 @router.get("/{booking_id}", response_model=BookingRead)
+@limiter.limit("60/minute")
 def route_get_booking(
+    request: Request,
     booking_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -39,7 +43,9 @@ def route_get_booking(
 
 
 @router.post("/", response_model=BookingRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute")
 def route_create_booking(
+    request: Request,
     data: BookingCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -48,7 +54,9 @@ def route_create_booking(
 
 
 @router.post("/{booking_id}/transition/{new_status}", response_model=BookingRead)
+@limiter.limit("10/minute")
 def route_transition_booking(
+    request: Request,
     booking_id: uuid.UUID,
     new_status: BookingStatus,
     db: Session = Depends(get_db),
@@ -58,18 +66,22 @@ def route_transition_booking(
 
 
 @router.patch("/{booking_id}", response_model=BookingRead)
+@limiter.limit("10/minute")
 def route_update_booking(
+    request: Request,
     booking_id: uuid.UUID,
     data: BookingUpdate,
     db: Session = Depends(get_db),
     current_user=Depends(get_admin_user),
 ):
    return update_booking(db, booking_id, data, current_user)
-   
+    
 
 
 @router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 def route_delete_booking(
+    request: Request,
     booking_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_admin_user),

@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from probe.schemas.device import DeviceCreate, DeviceRead, DeviceUpdate
@@ -12,14 +12,16 @@ from probe.services.device import (
     delete_device
 )
 from probe.services.battery import list_batteries
-from probe.services.auth import get_current_user, get_admin_user
+from probe.services.auth import get_current_user, get_admin_user, limiter
 
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
 
 @router.get("/", response_model=list[DeviceRead])
+@limiter.limit("60/minute")
 def route_list_devices(
+    request: Request,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
@@ -27,7 +29,9 @@ def route_list_devices(
 
 
 @router.get("/{device_id}", response_model=DeviceRead)
+@limiter.limit("60/minute")
 def route_get_device(
+    request: Request,
     device_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -36,7 +40,9 @@ def route_get_device(
 
 
 @router.get("/{device_id}/batteries", response_model=list)
+@limiter.limit("60/minute")
 def route_get_device_batteries(
+    request: Request,
     device_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -55,7 +61,9 @@ def route_get_device_batteries(
 
 
 @router.get("/by-serial-number/{serial_number}", response_model=DeviceRead)
+@limiter.limit("30/minute")
 def route_get_device_by_serial_number(
+    request: Request,
     serial_number: str,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -64,7 +72,9 @@ def route_get_device_by_serial_number(
 
 
 @router.post("/", response_model=DeviceRead, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/minute")
 def route_create_device(
+    request: Request,
     data: DeviceCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
@@ -75,7 +85,9 @@ def route_create_device(
 
 
 @router.patch("/{device_id}", response_model=DeviceRead)
+@limiter.limit("20/minute")
 def route_update_device(
+    request: Request,
     device_id: uuid.UUID,
     data: DeviceUpdate,
     db: Session = Depends(get_db),
@@ -85,7 +97,9 @@ def route_update_device(
 
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("10/minute")
 def route_delete_device(
+    request: Request,
     device_id: uuid.UUID,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),

@@ -14,6 +14,10 @@ def get_device(db: Session, device_id: UUID, current_user=None):
     device = DeviceRepository.get_by_id(db, device_id)
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    if current_user and current_user.user_type != "ADMIN" and device.recycler_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this device")
+
     return device
 
 
@@ -21,6 +25,10 @@ def get_device_by_serial_number(db: Session, serial_number: str, current_user=No
     device = DeviceRepository.get_by_serial_number(db, serial_number)
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    if current_user and current_user.user_type != "ADMIN" and device.recycler_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this device")
+
     return device
 
 
@@ -32,6 +40,9 @@ def list_devices(db: Session, current_user=None):
 
 
 def create_device(db: Session, data: DeviceCreate, current_user=None):
+    if current_user.user_type not in ["ADMIN", "RECYCLER"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only ADMIN or RECYCLER can create devices")
+
     clean_serial_number = data.serial_number.strip()
     clean_channel = data.channel.strip()
     clean_status = data.status.value.strip() if hasattr(data.status, 'value') else str(data.status).strip()
@@ -40,6 +51,12 @@ def create_device(db: Session, data: DeviceCreate, current_user=None):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Serial number cannot be empty or whitespace."
+        )
+
+    if len(clean_serial_number) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Serial number exceeds maximum length."
         )
 
     if DeviceRepository.get_by_serial_number(db, clean_serial_number):
@@ -54,6 +71,11 @@ def create_device(db: Session, data: DeviceCreate, current_user=None):
             detail="Required hardware configuration values cannot be empty or whitespaces."
         )
 
+    if len(clean_channel) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Channel name exceeds maximum length."
+        )
 
     recycler = user_repository.get_by_id(db, id=data.recycler_id)
     if not recycler:
@@ -61,7 +83,6 @@ def create_device(db: Session, data: DeviceCreate, current_user=None):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The managing owner user profile does not exist."
         )
-
 
     if cast(UserType, recycler.user_type) != UserType.RECYCLER:
         raise HTTPException(
@@ -74,13 +95,17 @@ def create_device(db: Session, data: DeviceCreate, current_user=None):
     dumped_data["channel"] = clean_channel
     dumped_data["status"] = clean_status
     if data.description:
-        dumped_data["description"] = data.description.strip()
+        dumped_data["description"] = data.description.strip()[:500] if data.description else None
 
     return DeviceRepository.create(db, dumped_data)
 
 
 def update_device(db: Session, device_id: UUID, data: DeviceUpdate, current_user=None):
-    device = get_device(db, device_id)
+    device = get_device(db, device_id, current_user)
+
+    if current_user and current_user.user_type != "ADMIN" and device.recycler_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only device owner or ADMIN can update devices")
+
     update_data = data.model_dump(exclude_unset=True)
     update_data.pop("serial_number", None)
     update_data.pop("recycler_id", None)
@@ -88,5 +113,9 @@ def update_device(db: Session, device_id: UUID, data: DeviceUpdate, current_user
 
 
 def delete_device(db: Session, device_id: UUID, current_user=None):
-    device = get_device(db, device_id)
+    device = get_device(db, device_id, current_user)
+
+    if current_user and current_user.user_type != "ADMIN" and device.recycler_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only device owner or ADMIN can delete devices")
+
     return DeviceRepository.delete(db, device)

@@ -22,13 +22,12 @@ class SensorReadingService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Telemetry entry not found"
             )
-        
-        if current_user and current_user.user_type != "ADMIN":
 
+        if current_user and current_user.user_type != "ADMIN":
             battery = BatteryRepository().get_by_id(db, reading.battery_id)
             if not battery or battery.recycler_id != current_user.user_id:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this reading")
-        
+
         return reading
 
     @staticmethod
@@ -40,21 +39,22 @@ class SensorReadingService:
         device = DeviceRepository().get_by_id(db, device_id)
         if not device:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
-        
+
         if current_user and current_user.user_type != "ADMIN" and device.recycler_id != current_user.user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this device")
-        
+
         return SensorReadingRepository().get_by_device_id(db, device_id)
+
 
     @staticmethod
     def get_readings_by_battery(db: Session, battery_id: UUID, current_user=None):
         battery = BatteryRepository().get_by_id(db, battery_id)
         if not battery:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Battery not found")
-        
+
         if current_user and current_user.user_type != "ADMIN" and battery.recycler_id != current_user.user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to this battery")
-        
+
         return SensorReadingRepository().get_by_battery_id(db, battery_id)
 
 

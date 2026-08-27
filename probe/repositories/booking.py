@@ -44,9 +44,11 @@ class BookingRepository:
        return booking
 
 
-   def update(self, db: Session, db_obj: Booking, data: dict):
+   def update(self, db: Session, db_obj: Booking, data: dict) -> Booking:
+       allowed_fields = {"status", "quantity", "user_id", "battery_id"}
        for field, value in data.items():
-           setattr(db_obj, field, value)
+           if field in allowed_fields and hasattr(db_obj, field):
+               setattr(db_obj, field, value)
        db.commit()
        db.refresh(db_obj)
        return db_obj
@@ -56,6 +58,7 @@ class BookingRepository:
        db.delete(db_obj)
        db.commit()
        return True
+
 
 
 

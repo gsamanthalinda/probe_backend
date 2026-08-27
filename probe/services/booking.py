@@ -14,6 +14,10 @@ def get_booking(db: Session, booking_id: UUID, current_user=None):
     booking = booking_repository.get_by_id(db, booking_id)
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking record not found")
+
+    if current_user and current_user.user_type != "ADMIN" and booking.user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You can only view your own bookings")
+
     return booking
 
 
@@ -25,8 +29,20 @@ def list_bookings(db: Session, current_user=None):
 
 
 def create_booking(db: Session, data: BookingCreate, current_user=None):
+    if current_user.user_type != "UPS_COMPANY":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access Denied: Only UPS_COMPANY can create bookings."
+        )
+
+    if data.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only create bookings for your own account."
+        )
+
     buyer = user_repository.get_by_id(db, data.user_id)
-    if not buyer or buyer.user_type != "UPS_COMPANY": 
+    if not buyer or buyer.user_type != "UPS_COMPANY":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access Denied: Account role unauthorized to initialize purchasing transactions."
@@ -38,7 +54,19 @@ def create_booking(db: Session, data: BookingCreate, current_user=None):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Target hardware entity profile not found."
         )
-        
+
+    if data.quantity < 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Booking quantity must be at least 1."
+        )
+
+    if data.quantity > (battery.quantity or 1):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Booking quantity exceeds available battery stock."
+        )
+
     latest_reading = SensorReadingRepository.get_latest_by_battery_id(db, data.battery_id)
     if not latest_reading or latest_reading.status != ReadingStatus.REUSABLE:
         raise HTTPException(
@@ -59,34 +87,50 @@ def create_booking(db: Session, data: BookingCreate, current_user=None):
 
 
 def transition_booking_status(db: Session, booking_id: UUID, new_status: BookingStatus, current_user=None):
-    booking = get_booking(db, booking_id)
-    
+    booking = get_booking(db, booking_id, current_user)
+
+    if current_user.user_type != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only ADMIN can transition booking status")
+
     if booking.status == BookingStatus.COMPLETED or booking.status == BookingStatus.CANCELED:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Workflow violation: Terminal booking states cannot be transitioned."
         )
-    
+
     if booking.status == BookingStatus.PENDING and new_status not in [BookingStatus.CONFIRMED, BookingStatus.CANCELED]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid transition: PENDING can only move to CONFIRMED or CANCELED."
         )
-    
+
     if booking.status == BookingStatus.CONFIRMED and new_status not in [BookingStatus.COMPLETED, BookingStatus.CANCELED]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid transition: CONFIRMED can only move to COMPLETED or CANCELED."
         )
-    
+
     return booking_repository.update(db, booking, {"status": new_status})
 
 
 def update_booking(db: Session, booking_id: UUID, data: BookingUpdate, current_user=None):
-    booking = get_booking(db, booking_id)
-    return booking_repository.update(db, booking, data.model_dump(exclude_unset=True))
+    booking = get_booking(db, booking_id, current_user)
+
+    if current_user.user_type != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only ADMIN can update bookings")
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    if "quantity" in update_data and update_data["quantity"] < 1:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1.")
+
+    return booking_repository.update(db, booking, update_data)
 
 
 def delete_booking(db: Session, booking_id: UUID, current_user=None):
-    booking = get_booking(db, booking_id)
+    booking = get_booking(db, booking_id, current_user)
+
+    if current_user.user_type != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only ADMIN can delete bookings")
+
     booking_repository.delete(db, booking)

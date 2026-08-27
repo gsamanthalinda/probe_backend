@@ -22,26 +22,52 @@ logger = logging.getLogger("mqtt-subscriber")
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 8883))
-MQTT_TOPIC = os.getenv("MQTT_TOPIC", "probe/telemetry/+")
+MQTT_TOPIC = os.getenv("MQTT_TOPIC", "herckers/telemetry/v1/data/+")
 MQTT_USER = os.getenv("MQTT_USER", "")
 MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "")
 MQTT_KEEPALIVE = int(os.getenv("MQTT_KEEPALIVE", 60))
 
+MAX_PAYLOAD_SIZE = 1024 * 1024
+
 db_worker_pool = ThreadPoolExecutor(max_workers=5)
+
+
+def _sanitize_string(value: str, max_length: int = 255) -> str:
+    if not value:
+        return ""
+    return str(value).strip()[:max_length]
 
 
 def process_and_save_reading(topic: str, payload_str: str):
     try:
-        data = json.loads(payload_str)
-        device_id = data.get("device_id")
-        battery_id = data.get("battery_id")
-        temp = float(data.get("temp", 0.0))
-        current = float(data.get("current", 0.0))
-        v_rest = float(data.get("v_rest", 0.0))
-        v_load = float(data.get("v_load", 0.0))
+        if not payload_str or len(payload_str) > MAX_PAYLOAD_SIZE:
+            logger.warning("Payload size invalid from topic %s", topic)
+            return
+
+        try:
+            data = json.loads(payload_str)
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON payload on topic %s", topic)
+            return
+
+        if not isinstance(data, dict):
+            logger.error("Payload is not a JSON object on topic %s", topic)
+            return
+
+        device_id = _sanitize_string(data.get("device_id", ""), 36)
+        battery_id = _sanitize_string(data.get("battery_id", ""), 36)
 
         if not device_id or not battery_id:
-            logger.warning("Missing identity keys in payload from topic %s", topic)
+            logger.warning("Missing device_id or battery_id in payload from topic %s", topic)
+            return
+
+        try:
+            temp = float(data.get("temp", 0.0))
+            current = float(data.get("current", 0.0))
+            v_rest = float(data.get("v_rest", 0.0))
+            v_load = float(data.get("v_load", 0.0))
+        except (TypeError, ValueError):
+            logger.error("Invalid numeric telemetry values in payload from topic %s", topic)
             return
 
         db = session()
@@ -67,8 +93,6 @@ def process_and_save_reading(topic: str, payload_str: str):
         finally:
             db.close()
 
-    except json.JSONDecodeError:
-        logger.error("Corrupt or invalid payload array skipped on %s", topic)
     except Exception as e:
         logger.error("Unexpected worker loop exception on %s: %s", topic, e)
 
@@ -101,7 +125,7 @@ def main():
         client_id="probe-backend-subscriber",
         clean_session=False
     )
-    
+
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
     client.on_message = on_message
