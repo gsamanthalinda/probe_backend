@@ -5,11 +5,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from probe.rate_limiter import limiter, RateLimitExceeded, _rate_limit_exceeded_handler
-from probe.routers import user_router
-from probe.routers import device_router
-from probe.routers import battery_router
-from probe.routers import booking_router
-from probe.routers import sensor_reading_router
+from probe.routers import user_router, device_router, battery_router, booking_router, sensor_reading_router
 import probe.models as models
 from database import Base, engine
 
@@ -25,12 +21,19 @@ app = FastAPI(
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+env_hosts = os.getenv("ALLOWED_HOSTS")
+if env_hosts:
+    allowed_hosts_list = [h.strip() for h in env_hosts.split(",")]
+else:
+    allowed_hosts_list = ["localhost", "127.0.0.1", "*.localhost"]
+
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["localhost", "127.0.0.1", "*.localhost"],
+    allowed_hosts=allowed_hosts_list,
 )
 
-origins = os.getenv("CORS_ORIGINS").split(",")
+cors_env = os.getenv("CORS_ORIGINS")
+origins = [o.strip() for o in cors_env.split(",")] if cors_env else ["http://localhost:3000", "http://127.0.0.1:3000"]
 
 app.add_middleware(
     CORSMiddleware,
