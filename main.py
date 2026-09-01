@@ -46,14 +46,9 @@ cors_env = os.getenv("CORS_ORIGINS")
 if cors_env:
     origins = [o.strip() for o in cors_env.split(",")]
 else:
-
     origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-  
     if os.getenv("PORT") or os.getenv("HEROKU_APP_NAME"):
-        origins = [
-            "https://herckersdashboard.vercel.app",
-            "https://probe-herckers-3325e295df63.herokuapp.com",
-        ]
+        origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
