@@ -9,6 +9,7 @@ from probe.routers import user_router, device_router, battery_router, booking_ro
 import probe.models as models
 from database import Base, engine
 
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -19,13 +20,22 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
+
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 env_hosts = os.getenv("ALLOWED_HOSTS")
 if env_hosts:
     allowed_hosts_list = [h.strip() for h in env_hosts.split(",")]
 else:
-    allowed_hosts_list = ["localhost", "127.0.0.1", "*.localhost"]
+  
+    if os.getenv("PORT") or os.getenv("HEROKU_APP_NAME"):
+        allowed_hosts_list = ["*"]
+    else:
+        allowed_hosts_list = [
+            "localhost",
+            "127.0.0.1",
+            "*.localhost",
+        ]
 
 app.add_middleware(
     TrustedHostMiddleware,
@@ -33,7 +43,12 @@ app.add_middleware(
 )
 
 cors_env = os.getenv("CORS_ORIGINS")
-origins = [o.strip() for o in cors_env.split(",")] if cors_env else ["http://localhost:3000", "http://127.0.0.1:3000"]
+if cors_env:
+    origins = [o.strip() for o in cors_env.split(",")]
+else:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    if os.getenv("PORT") or os.getenv("HEROKU_APP_NAME"):
+        origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,8 +60,10 @@ app.add_middleware(
     max_age=600,
 )
 
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -54,6 +71,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An internal server error occurred."},
     )
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -66,6 +84,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
     return response
 
+
 @app.middleware("http")
 async def limit_request_size(request: Request, call_next):
     if request.headers.get("content-length"):
@@ -76,6 +95,7 @@ async def limit_request_size(request: Request, call_next):
                 content={"detail": "Request too large. Maximum size is 1MB."},
             )
     return await call_next(request)
+
 
 app.include_router(user_router)
 app.include_router(booking_router)
